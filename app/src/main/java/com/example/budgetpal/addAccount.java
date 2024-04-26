@@ -58,37 +58,45 @@ public class addAccount extends AppCompatActivity {
 
         // Fetch chat data from your data source (e.g., database, network API)
         // For example, if your data source returns a list of strings
-        List<String> chatMessages = fetchChatMessagesFromDataSource();
+        List<Chat> chatMessages = fetchChatMessagesFromDataSource();
 
         // Assume a default sender and timestamp for simplicity
         String defaultSender = "John Doe";
         String defaultTimestamp = "12:00 PM";
 
         // Convert fetched data to Chat objects
-        for (String message : chatMessages) {
-            chatList.add(new Chat(defaultSender, message, defaultTimestamp));
+        for (Chat message : chatMessages) {
+            chatList.add(new Chat(message.getSender(), message.getMessage(), message.getTime()));
         }
 
         return chatList;
     }
-    private List<String> fetchChatMessagesFromDataSource() {
-        List<String> chatMessages = new ArrayList<>();
+    private List<Chat> fetchChatMessagesFromDataSource() {
+        List<Chat> chatMessages = new ArrayList<>();
 
         try {
             // Get a reference to the SMS inbox URI
             Uri inboxUri = Uri.parse("content://sms/inbox");
 
             // Define the columns you want to retrieve
-            String[] projection = new String[]{"body"};
+            String[] projection = new String[]{"body", "address", "date"};
 
             // Create a cursor to iterate over the SMS inbox
             Cursor cursor = getContentResolver().query(inboxUri, projection, null, null, null);
 
-            // Iterate over the cursor and add each message body to the list
+            // Iterate over the cursor and create Chat objects
             if (cursor != null && cursor.moveToFirst()) {
                 do {
                     String messageBody = cursor.getString(cursor.getColumnIndexOrThrow("body"));
-                    chatMessages.add(messageBody);
+                    String senderAddress = cursor.getString(cursor.getColumnIndexOrThrow("address"));
+                    long timestamp = cursor.getLong(cursor.getColumnIndexOrThrow("date"));
+
+                    // Convert timestamp to a readable format
+                    String formattedTimestamp = formatTimestamp(timestamp);
+
+                    // Create a Chat object and add it to the list
+                    Chat chat = new Chat(senderAddress, messageBody, formattedTimestamp);
+                    chatMessages.add(chat);
                 } while (cursor.moveToNext());
 
                 cursor.close();
@@ -98,5 +106,9 @@ public class addAccount extends AppCompatActivity {
         }
 
         return chatMessages;
+    }
+
+    private String formatTimestamp(long timestamp) {
+        return String.valueOf(timestamp);
     }
 }
