@@ -1,11 +1,14 @@
 package com.example.budgetpal;
 
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -18,7 +21,11 @@ import com.example.budgetpal.ui.login.DatabaseHelper;
 import java.util.ArrayList;
 import java.util.List;
 
-public class addAccount extends AppCompatActivity {
+public class addAccount extends AppCompatActivity implements ChatAdapter.OnChatItemClickListener{
+
+    private static final String DATABASE_NAME = "accounts.db";
+    private static final int DATABASE_VERSION = 1;
+    private DatabaseHelper databaseHelper;
 
     private RecyclerView recyclerView;
     private ChatAdapter chatAdapter;
@@ -40,30 +47,55 @@ public class addAccount extends AppCompatActivity {
 
         // Initialize and set adapter
         chatAdapter = new ChatAdapter(getActualChatList());
+        chatAdapter.setOnChatItemClickListener(this); // Set the click listener
         recyclerView.setAdapter(chatAdapter);
-    }
 
-    // Method to generate sample chat data
-    private List<Chat> getSampleChatList() {
-        List<Chat> chatList = new ArrayList<>();
-        // Add sample chat items here (you may replace this with actual chat data)
-        chatList.add(new Chat("John", "Hello!", "10:00 AM"));
-        chatList.add(new Chat("Alice", "Hi there!", "10:05 AM"));
-        chatList.add(new Chat("Bob", "How are you?", "10:10 AM"));
-        // Add more chat items as needed
-        return chatList;
+        // Initialize the DatabaseHelper
+        databaseHelper = new DatabaseHelper(this);
+    }
+    @Override
+    public void onChatItemClick(String senderAddress) {
+        // Create an AlertDialog.Builder
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(senderAddress);
+        builder.setMessage("Add this as an account?");
+
+        // Set the positive button
+        builder.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // Handle the "Yes" case here
+                // You can add code to save the chat as an account
+                Toast.makeText(addAccount.this, "Account added", Toast.LENGTH_SHORT).show();
+                // Save the chat as an account
+                long accountId = saveAccountAndContent(senderAddress);
+                if (accountId != -1) {
+                    Toast.makeText(addAccount.this, "Account added", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(addAccount.this, "Failed to add account", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        // Set the negative button
+        builder.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Toast.makeText(addAccount.this, "Operation cancelled!", Toast.LENGTH_SHORT).show();
+                // Handle the "No" case here
+                // No action required, the dialog will be dismissed
+            }
+        });
+
+        // Create and show the AlertDialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
     private List<Chat> getActualChatList() {
-        List<Chat> chatList = new ArrayList<>();
-
         // Fetch chat data from your data source (e.g., database, network API)
+        List<Chat> chatList = new ArrayList<>();
         // For example, if your data source returns a list of strings
         List<Chat> chatMessages = fetchChatMessagesFromDataSource();
-
-        // Assume a default sender and timestamp for simplicity
-        String defaultSender = "John Doe";
-        String defaultTimestamp = "12:00 PM";
-
         // Convert fetched data to Chat objects
         for (Chat message : chatMessages) {
             chatList.add(new Chat(message.getSender(), message.getMessage(), message.getTime()));
@@ -73,6 +105,7 @@ public class addAccount extends AppCompatActivity {
     }
     private List<Chat> fetchChatMessagesFromDataSource() {
         List<Chat> chatMessages = new ArrayList<>();
+        List<String> addresses = new ArrayList<>();
 
         try {
             // Get a reference to the SMS inbox URI
@@ -94,9 +127,13 @@ public class addAccount extends AppCompatActivity {
                     // Convert timestamp to a readable format
                     String formattedTimestamp = formatTimestamp(timestamp);
 
-                    // Create a Chat object and add it to the list
-                    Chat chat = new Chat(senderAddress, messageBody, formattedTimestamp);
-                    chatMessages.add(chat);
+                    if (!addresses.contains(senderAddress)) {
+                        // If not, add it to the list and create a new Chat object
+                        addresses.add(senderAddress);
+                        // Create a Chat object and add it to the list
+                        Chat chat = new Chat(senderAddress, messageBody, formattedTimestamp);
+                        chatMessages.add(chat);
+                    }
                 } while (cursor.moveToNext());
 
                 cursor.close();
@@ -110,5 +147,56 @@ public class addAccount extends AppCompatActivity {
 
     private String formatTimestamp(long timestamp) {
         return String.valueOf(timestamp);
+    }
+    private long saveAccountAndContent(String senderAddress) {
+        // Save the account information
+        long accountId = databaseHelper.insertAccount(senderAddress);
+        if (accountId != -1) {
+            // Fetch the messages for the sender's address
+            List<Chat> chatMessages = fetchChatMessagesForSender(senderAddress);
+            // Save the message content
+            for (Chat chatMessage : chatMessages) {
+                databaseHelper.insertAccountContent(accountId, chatMessage.getMessage(), "SMS", 0.0);
+            }
+        }
+        return accountId;
+    }
+    private List<Chat> fetchChatMessagesForSender(String senderAddress) {
+        List<Chat> chatMessages = new ArrayList<>();
+
+        try {
+            // Get a reference to the SMS inbox URI
+            Uri inboxUri = Uri.parse("content://sms/inbox");
+
+            // Define the columns you want to retrieve
+            String[] projection = new String[]{"body", "address", "date"};
+
+            // Create a cursor to iterate over the SMS inbox
+            Cursor cursor = getContentResolver().query(inboxUri, projection, null, null, null);
+
+            // Iterate over the cursor and create Chat objects for the specified sender
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    String messageBody = cursor.getString(cursor.getColumnIndexOrThrow("body"));
+                    String sender = cursor.getString(cursor.getColumnIndexOrThrow("address"));
+                    long timestamp = cursor.getLong(cursor.getColumnIndexOrThrow("date"));
+
+                    // Convert timestamp to a readable format
+                    String formattedTimestamp = formatTimestamp(timestamp);
+
+                    // Add the chat message to the list if it's from the specified sender
+                    if (sender.equals(senderAddress)) {
+                        Chat chat = new Chat(sender, messageBody, formattedTimestamp);
+                        chatMessages.add(chat);
+                    }
+                } while (cursor.moveToNext());
+
+                cursor.close();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return chatMessages;
     }
 }

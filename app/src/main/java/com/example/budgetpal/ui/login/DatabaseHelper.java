@@ -16,6 +16,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_PIN = "pin";
     private static final String COLUMN_LOGIN_METHOD = "login_method";
 
+    /*Accounts*/
+    private static final String TABLE_ACCOUNTS = "accounts";
+    private static final String COLUMN_ACCOUNT_ID = "account_id";
+    private static final String COLUMN_ACCOUNT_NAME = "account_name";
+    private static final String COLUMN_ADDED_ON = "added_on";
+    private static final String COLUMN_LAST_UPDATED_ON = "last_updated_on";
+
+    private static final String TABLE_ACCOUNT_CONTENT = "account_content";
+    private static final String COLUMN_CONTENT_ID = "id";
+    private static final String COLUMN_ACCOUNT_CONTENT = "sms_content";
+    private static final String COLUMN_SMS_TYPE = "sms_type";
+    private static final String COLUMN_AMOUNT = "amount";
+
     // Constructor
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -33,12 +46,32 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_LOGIN_METHOD + " TEXT" +
                 ")";
         db.execSQL(CREATE_USERS_TABLE);
+
+        // Create Accounts Table
+        String createAccountsTable = "CREATE TABLE " + TABLE_ACCOUNTS + "(" +
+                COLUMN_ACCOUNT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COLUMN_ACCOUNT_NAME + " TEXT, " +
+                COLUMN_ADDED_ON + " TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                COLUMN_LAST_UPDATED_ON + " TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
+        // Create Account Content Table
+        String createAccountContentTable = "CREATE TABLE " + TABLE_ACCOUNT_CONTENT + "(" +
+                COLUMN_CONTENT_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COLUMN_ACCOUNT_ID + " INTEGER, " +
+                COLUMN_ACCOUNT_CONTENT + " TEXT, " +
+                COLUMN_SMS_TYPE + " TEXT, " +
+                COLUMN_AMOUNT + " REAL, " +
+                "FOREIGN KEY(" + COLUMN_ACCOUNT_ID + ") REFERENCES " + TABLE_ACCOUNTS + "(" + COLUMN_ACCOUNT_ID + "))";
+
+        db.execSQL(createAccountsTable);
+        db.execSQL(createAccountContentTable);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // Drop older table if existed
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_ACCOUNT_CONTENT);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_ACCOUNTS);
         // Create tables again
         onCreate(db);
     }
@@ -98,5 +131,22 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         db.close();
         return lastUser;
+    }
+
+    public long insertAccount(String accountName) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_ACCOUNT_NAME, accountName);
+        return db.insert(TABLE_ACCOUNTS, null, values);
+    }
+
+    public long insertAccountContent(long accountId, String smsContent, String smsType, double amount) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_ACCOUNT_ID, accountId);
+        values.put(COLUMN_ACCOUNT_CONTENT, smsContent);
+        values.put(COLUMN_SMS_TYPE, smsType);
+        values.put(COLUMN_AMOUNT, amount);
+        return db.insert(TABLE_ACCOUNT_CONTENT, null, values);
     }
 }
