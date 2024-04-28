@@ -1,10 +1,18 @@
 package com.example.budgetpal.ui.login;
 
+import android.accounts.Account;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+
+import com.example.budgetpal.ui.BankAccount;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final int DATABASE_VERSION = 1;
@@ -93,14 +101,27 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Check if user exists
     public boolean checkUserExists() {
+        //emptyUserTable();
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT * FROM " + TABLE_USERS;
+        String query = "SELECT * FROM " + TABLE_USERS + " WHERE " + COLUMN_ID + " = 1";
         Cursor cursor = db.rawQuery(query, null);
         boolean exists = (cursor.getCount() > 0);
         cursor.close();
         db.close();
         return exists;
     }
+    public void emptyUserTable() {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        try {
+            db.delete(TABLE_USERS, null, null);
+        } catch (SQLException e) {
+
+        } finally {
+            db.close();
+        }
+    }
+
     // Get details of the last user added
     // Get details of the last user added
     public User getLastUser() {
@@ -108,7 +129,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         User lastUser = null;
 
         String query = "SELECT * FROM " + TABLE_USERS +
-                " ORDER BY " + COLUMN_ID + " DESC LIMIT 1";
+                " WHERE " + COLUMN_ID + " = 1";
 
         Cursor cursor = db.rawQuery(query, null);
         if (cursor != null && cursor.moveToFirst()) {
@@ -148,5 +169,34 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_SMS_TYPE, smsType);
         values.put(COLUMN_AMOUNT, amount);
         return db.insert(TABLE_ACCOUNT_CONTENT, null, values);
+    }
+
+    public List<BankAccount> getAllAccounts() {
+        List<BankAccount> accounts = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        String query = "SELECT * FROM " + TABLE_ACCOUNTS;
+        Cursor cursor = db.rawQuery(query, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                int accountIdIndex = cursor.getColumnIndex(COLUMN_ACCOUNT_ID);
+                int accountNameIndex = cursor.getColumnIndex(COLUMN_ACCOUNT_NAME);
+                int addedOnIndex = cursor.getColumnIndex(COLUMN_ADDED_ON);
+                int lastUpdatedOnIndex = cursor.getColumnIndex(COLUMN_LAST_UPDATED_ON);
+
+                int accountId = cursor.getInt(accountIdIndex);
+                String accountName = cursor.getString(accountNameIndex);
+                String addedOn = cursor.getString(addedOnIndex);
+                String lastUpdatedOn = cursor.getString(lastUpdatedOnIndex);
+
+                BankAccount account = new BankAccount(accountId, accountName, addedOn, lastUpdatedOn);
+                accounts.add(account);
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        db.close();
+        return accounts;
     }
 }

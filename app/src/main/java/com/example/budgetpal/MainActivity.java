@@ -15,6 +15,10 @@ import android.view.View;
 import android.view.Menu;
 import android.widget.Toast;
 
+import com.example.budgetpal.ui.AccountAdapter;
+import com.example.budgetpal.ui.BankAccount;
+import com.example.budgetpal.ui.home.HomeFragment;
+import com.example.budgetpal.ui.login.DatabaseHelper;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
@@ -26,13 +30,19 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.budgetpal.databinding.ActivityMainBinding;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_SMS = 1;
     private AppBarConfiguration mAppBarConfiguration;
     private ActivityMainBinding binding;
+    private HomeFragment homeFragment;
+    private RecyclerView accounts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +71,25 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
+
+        // Initialize RecyclerView
+        accounts = findViewById(R.id.accounts_list);
+        accounts.setLayoutManager(new LinearLayoutManager(this));
+
+        // Initialize and set adapter
+        DatabaseHelper databaseHelper = new DatabaseHelper(this);
+        List<BankAccount> accountList = databaseHelper.getAllAccounts();
+        final AccountAdapter acc = new AccountAdapter(accountList);
+
+        //acc.setOnAccItemClickListener((AccountAdapter.OnAccItemClickListener) this); // Set the click listener
+        accounts.setAdapter(acc);
+        acc.setOnClickListener(new AccountAdapter.OnClickListener() {
+            @Override
+            public void onClick(int position, BankAccount model) {
+                Toast.makeText(MainActivity.this, "AAAAAAAAA", Toast.LENGTH_SHORT).show();
+            }
+        });
+
     }
 
     private void requestSmsPermission() {
@@ -124,6 +153,21 @@ public class MainActivity extends AppCompatActivity {
 
         }catch (Exception ex){
             Toast.makeText(this, ex.toString(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void check_accounts() {
+        DatabaseHelper databaseHelper = new DatabaseHelper(this);
+        List<BankAccount> accountList = databaseHelper.getAllAccounts();
+// Process the accountList as needed
+        for (BankAccount account : accountList) {
+            // Do something with the account object
+            // String accountName = account.getAccountName();
+            // String addedOn = account.getAddedOn();
+        }
+        // Pass the account data to the HomeFragment
+        if (homeFragment != null) {
+            homeFragment.setAccountData(accountList);
         }
     }
 }
