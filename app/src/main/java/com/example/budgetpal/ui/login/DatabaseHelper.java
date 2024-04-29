@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.example.budgetpal.BankAccountItems;
 import com.example.budgetpal.ui.BankAccount;
 
 import java.util.ArrayList;
@@ -36,7 +37,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COLUMN_ACCOUNT_CONTENT = "sms_content";
     private static final String COLUMN_SMS_TYPE = "sms_type";
     private static final String COLUMN_AMOUNT = "amount";
-
+    private static final String COLUMN_DATE = "date";
     // Constructor
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -68,6 +69,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 COLUMN_ACCOUNT_CONTENT + " TEXT, " +
                 COLUMN_SMS_TYPE + " TEXT, " +
                 COLUMN_AMOUNT + " REAL, " +
+                COLUMN_DATE + " TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                 "FOREIGN KEY(" + COLUMN_ACCOUNT_ID + ") REFERENCES " + TABLE_ACCOUNTS + "(" + COLUMN_ACCOUNT_ID + "))";
 
         db.execSQL(createAccountsTable);
@@ -161,13 +163,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return db.insert(TABLE_ACCOUNTS, null, values);
     }
 
-    public long insertAccountContent(long accountId, String smsContent, String smsType, double amount) {
+    public long insertAccountContent(long accountId, String smsContent, String smsType, double amount, String time) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_ACCOUNT_ID, accountId);
         values.put(COLUMN_ACCOUNT_CONTENT, smsContent);
         values.put(COLUMN_SMS_TYPE, smsType);
         values.put(COLUMN_AMOUNT, amount);
+        values.put(COLUMN_DATE, time);
         return db.insert(TABLE_ACCOUNT_CONTENT, null, values);
     }
 
@@ -191,6 +194,37 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 String lastUpdatedOn = cursor.getString(lastUpdatedOnIndex);
 
                 BankAccount account = new BankAccount(accountId, accountName, addedOn, lastUpdatedOn);
+                accounts.add(account);
+            } while (cursor.moveToNext());
+        }
+
+        cursor.close();
+        db.close();
+        return accounts;
+    }
+
+    public List<BankAccountItems> getAllAccountItems(Integer account_id) {
+        List<BankAccountItems> accounts = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        String query = "SELECT * FROM " + TABLE_ACCOUNT_CONTENT + " WHERE " + COLUMN_ACCOUNT_ID + " = " + account_id;
+        Cursor cursor = db.rawQuery(query, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                int accountIdIndex = cursor.getColumnIndex(COLUMN_ACCOUNT_ID);
+                int accContent = cursor.getColumnIndex(COLUMN_ACCOUNT_CONTENT);
+                int accAmount = cursor.getColumnIndex(COLUMN_AMOUNT);
+                int accType = cursor.getColumnIndex(COLUMN_SMS_TYPE);
+                int receivedOn = cursor.getColumnIndex(COLUMN_DATE);
+
+                int accountId = cursor.getInt(accountIdIndex);
+                String accountContent = cursor.getString(accContent);
+                Double accountAmount = cursor.getDouble(accAmount);
+                String accountType = cursor.getString(accType);
+                String accountDate = cursor.getString(receivedOn);
+
+                BankAccountItems account = new BankAccountItems(accountId, accountContent, accountType, accountAmount, accountDate);
                 accounts.add(account);
             } while (cursor.moveToNext());
         }

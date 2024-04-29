@@ -19,9 +19,11 @@
         android:theme="@style/Theme.Budgetpal"
         tools:targetApi="31">
         <activity
-            android:name=".addAccount"
+            android:name=".AccountDetails"
             android:exported="false" />
-        <!-- Only one launcher activity should be defined -->
+        <activity
+            android:name=".addAccount"
+            android:exported="false" /> <!-- Only one launcher activity should be defined -->
         <activity
             android:name=".splash"
             android:exported="true">

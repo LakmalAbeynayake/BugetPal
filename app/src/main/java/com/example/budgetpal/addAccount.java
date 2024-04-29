@@ -156,7 +156,7 @@ public class addAccount extends AppCompatActivity implements ChatAdapter.OnChatI
             List<Chat> chatMessages = fetchChatMessagesForSender(senderAddress);
             // Save the message content
             for (Chat chatMessage : chatMessages) {
-                databaseHelper.insertAccountContent(accountId, chatMessage.getMessage(), "SMS", 0.0);
+                databaseHelper.insertAccountContent(accountId, chatMessage.getMessage(), "SMS", 0.0, chatMessage.getTime());
             }
         }
         return accountId;

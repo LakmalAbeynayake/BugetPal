@@ -86,7 +86,10 @@ public class MainActivity extends AppCompatActivity {
         acc.setOnClickListener(new AccountAdapter.OnClickListener() {
             @Override
             public void onClick(int position, BankAccount model) {
-                Toast.makeText(MainActivity.this, "AAAAAAAAA", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MainActivity.this, String.valueOf(model.getAccountId()), Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, AccountDetails.class);
+                intent.putExtra("ACCOUNT_ID",model.getAccountId());
+                startActivity(intent);
             }
         });
 

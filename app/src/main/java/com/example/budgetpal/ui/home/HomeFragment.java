@@ -53,7 +53,7 @@ public class HomeFragment extends Fragment {
         //AccountAdapter.setOnChatItemClickListener(this); // Set the click listener
         //recyclerView.setAdapter(chatAdapter);
 
-        Toast.makeText(this.getContext(),"HEY HEY", Toast.LENGTH_SHORT);
+        //Toast.makeText(this.getContext(),"HEY HEY", Toast.LENGTH_SHORT);
 
         return view;
     }
